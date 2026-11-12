@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# QA Queue Notifier — copy to .github/workflows/qa-notify.yml in each repo
+# that should feed into the central QA queue at approovia-app/qa-dashboard.
+#
+# Required secret in the source repo:
+#   QA_DISPATCH_TOKEN — fine-grained PAT with:
+#     • Actions: write   on approovia-app/qa-dashboard
+#
+# That's it. The receiver workflow in wksm-qa-webhook handles everything else.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Notify QA Queue
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [development, main]
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dispatch to QA queue
+        run: |
+          gh api repos/approovia-app/qa-dashboard/dispatches \
+            --method POST \
+            -f event_type="pr-merged" \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[pr_number]=${{ github.event.pull_request.number }}"
+        env:
+          GH_TOKEN: ${{ secrets.QA_DISPATCH_TOKEN }}
