@@ -1,0 +1,6 @@
+{
+  "name": "QA Queue Notifier",
+  "description": "Dispatches a pr-merged event to qa-dashboard when a PR merges. Required for all repos that contain code or documents subject to QA review.",
+  "iconName": "octicon-checklist",
+  "categories": ["QA", "CI"]
+}
