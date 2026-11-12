@@ -6,7 +6,9 @@
 #   QA_DISPATCH_TOKEN — fine-grained PAT with:
 #     • Actions: write   on approovia-app/qa-dashboard
 #
-# That's it. The receiver workflow in wksm-qa-webhook handles everything else.
+# Runner: uses the org choose-runner pattern — all jobs run on self-hosted
+# runners. No job may name a GitHub-hosted runner directly (ubuntu-*, etc.)
+# as that bypasses the unmetered pool and incurs billed minutes.
 # ─────────────────────────────────────────────────────────────────────────────
 name: Notify QA Queue
 
@@ -16,10 +18,25 @@ on:
     branches: [development, main]
 
 jobs:
-  notify:
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+  choose-runner:
+    runs-on: [self-hosted, chooser]
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      label: ${{ steps.pick.outputs.label }}
+    steps:
+      - name: Pick runner pool
+        id: pick
+        run: echo 'label=["self-hosted","linux","x64"]' >> "$GITHUB_OUTPUT"
 
+  notify:
+    needs: choose-runner
+    if: github.event.pull_request.merged == true
+    runs-on: ${{ fromJson(needs.choose-runner.outputs.label) }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: Dispatch to QA queue
         run: |
